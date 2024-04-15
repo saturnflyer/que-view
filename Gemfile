@@ -11,3 +11,6 @@ gem "rspec-rails"
 gem "puma"
 
 gem "appraisal"
+
+gem "simplecov"
+gem "simplecov_json_formatter"

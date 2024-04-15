@@ -61,17 +61,11 @@ jobs:
       with:
         path: coverage-reports
 
-    - name: Install SimpleCov
-      run: |
-        gem install simplecov
-
     - name: Combine coverage results
       run: |
-        # Install the simplecov-json gem or any other simplecov formatter gem you wish to use
-        gem install simplecov-json
-        # Combine the results with SimpleCov's Collate feature
-        simplecov-collate coverage-reports/*/coverage/.resultset.json --format html --format json
-        # Output the combined coverage report
+        # Ensure simplecov-json is included in your project's Gemfile or install it here
+        bundle exec rake coverage:report
+        # Rename the HTML report for consistency
         mv coverage/index.html coverage/coverage.html
 
     - name: Upload combined coverage report
