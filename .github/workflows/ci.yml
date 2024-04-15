@@ -1,0 +1,81 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    name: Ruby ${{ matrix.ruby }} - ${{ matrix.appraisal }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ruby: [3.0.6, 3.1.4, 3.2.3, 3.3.0]
+        appraisal: [rails-6-0, rails-6-1, rails-7-0, rails-7-1]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: ${{ matrix.ruby }}
+
+    - name: Cache Appraisal dependencies
+      uses: actions/cache@v2
+      with:
+        path: vendor/bundle
+        key: ${{ runner.os }}-gems-${{ hashFiles('**/Gemfile.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-gems-
+
+    - name: Install dependencies
+      run: |
+        gem install bundler
+        bundle install --jobs 4 --retry 3
+
+    - name: Install Appraisal
+      run: |
+        bundle exec appraisal install
+
+    - name: Run tests with Appraisal
+      run: |
+        bundle exec appraisal ${{ matrix.appraisal }} rspec
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: coverage-${{ matrix.ruby }}-${{ matrix.appraisal }}
+        path: coverage/
+
+  coverage:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Download all coverage reports
+      uses: actions/download-artifact@v2
+      with:
+        path: coverage-reports
+
+    - name: Install SimpleCov
+      run: |
+        gem install simplecov
+
+    - name: Combine coverage results
+      run: |
+        # Install the simplecov-json gem or any other simplecov formatter gem you wish to use
+        gem install simplecov-json
+        # Combine the results with SimpleCov's Collate feature
+        simplecov-collate coverage-reports/*/coverage/.resultset.json --format html --format json
+        # Output the combined coverage report
+        mv coverage/index.html coverage/coverage.html
+
+    - name: Upload combined coverage report
+      uses: actions/upload-artifact@v2
+      with:
+        name: combined-coverage-report
+        path: coverage/
